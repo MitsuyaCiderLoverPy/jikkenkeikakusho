@@ -1,0 +1,10 @@
+input{
+    position:absolute;
+    top:0px;
+    left: 50vw;
+    border-width: 3px;
+    border-color: #888888;
+}
+label{
+    position:relative;
+}

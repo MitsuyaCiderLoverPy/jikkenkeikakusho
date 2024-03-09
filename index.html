@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="utf-8">
+    <title>test server</title>
+    <link rel="icon" href="static/higashi_nsc.ico">
+    <style>
+        input {
+            width: 75vw;
+            border-bottom: 2px solid #999;
+            border-top: none;
+            border-right: none;
+            border-left: none;
+            outline: none;
+            font-size: 3vh;
+            margin-bottom: 1px;
+            padding: 0;
+        }
+
+        input:focus {
+            border-bottom: 3px solid #2d7164;
+            margin-bottom: 0px;
+        }
+
+        .input_div {
+            position: relative;
+        }
+
+        /*.input_div::after {
+            position: absolute;
+            content: "";
+            left: 0px;
+            width: 75px;
+            height: 5px;
+            background-color: #000;
+            bottom: 0;
+        }*/
+
+        label {
+            position: relative;
+            height: 5vh;
+            margin-top: 3vh;
+        }
+
+        .form_text {
+            font-size: 4vh;
+            margin-top: 5vh;
+            top: 0px;
+            width: 100vw;
+        }
+
+        #hider {
+            position: fixed;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: none;
+            top: 0px;
+            left: 0px;
+        }
+
+        #msgbox {
+            width: 50vw;
+            height: 50vh;
+            position: fixed;
+            left: 25vw;
+            top: 25vh;
+            display: none;
+            background-color: #fff;
+        }
+
+        #msg_content {
+            width: 75%;
+            height: 80%;
+            margin: 5vw;
+            overflow-y: scroll;
+            overflow-x: scroll;
+        }
+
+        button {
+            border-radius: 0.5vw;
+            background-color: #fff;
+            border: 3px solid #2d7164;
+            color: #2d7164;
+            cursor: pointer;
+            transition: all 0.2s 0s ease;
+        }
+
+        button:hover {
+            background-color: #2d7164;
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body>
+    <span style="font-size: 5vw;">実験計画書作成サイト</span><br>
+    <button onclick="get_history()" style="width: 15vw; font-size: 1vw; height: 2vw;">過去の履歴から作成</button>
+    <div class="form_text">表題</div>
+    <div class="input_div"><input type="text"></div><br>
+    <div class="form_text">実験予定日</div>
+    <div class="input_div"><input type="text"></div><br>
+    <div class="form_text">実験実施日</div>
+    <div class="input_div"><input type="text"></div><br>
+    <div class="form_text">記入者</div>
+    <div class="input_div"><input type="text"></div><br>
+    <div class="form_text">参加者</div>
+    <div class="input_div"><input type="text"></div><br>
+    <div class="form_text">目的</div>
+    <div class="input_div"><input type="text"></div><br>
+    <div class="form_text">器具</div>
+    <div class="input_div"><input type="text"></div><br>
+    <div class="form_text">薬品</div>
+    <div class="input_div"><input type="text"></div><br>
+    <div class="form_text">手順・予想・注意</div>
+    <div class="input_div"><input type="text"></div><br>
+    <div class="form_text">結果</div>
+    <div class="input_div"><input type="text"></div><br>
+    <div class="form_text">考察・課題</div>
+    <div class="input_div"><input type="text"></div><br>
+    <button onclick="main()" style="width: 8vw; font-size: 2vw; height: 3vw;">submit</button>
+    <div id="history" class="history">
+        <div id="history_text" class="history_text"></div>
+    </div>
+    <div id="hider">
+        <div id="msgbox">
+            <div id="msg_content">
+
+            </div>
+        </div>
+    </div>
+    <script>
+        let id_data = {}
+        let history_dict = {}
+        let history_detail_num = 0
+
+        function delete_msgbox() {
+            document.getElementById('msg_content').innerHTML = ""
+            document.getElementById('msgbox').style.display = "none"
+            document.getElementById('hider').style.display = "none"
+        }
+
+        function main() {
+            let value_array = []
+            let label_array = []
+            for (let i = 0; i < 11; i++) {
+                value_array.push(document.getElementsByTagName('input')[i].value)
+            }
+            //let req_id = getId()
+            //console.log("ID:", req_id)
+            fetch("http://127.0.0.1:5000/getid", { method: "GET", mode: "cors" })
+                .then(response => response.json())
+                .then(jsondata=>{
+                    console.log(jsondata)
+                    let file_id = jsondata["id"]
+                    console.log(file_id)
+                    let values = { id: Number(file_id), mode: "main", content: { hyoudai: value_array[0], yoteibi: value_array[1], jissibi: value_array[2], kinyuusha: value_array[3], sankasha: value_array[4], mokuteki: value_array[5], kigu: value_array[6], yakuhin: value_array[7], tejun: value_array[8], kekka: value_array[9], kousatu: value_array[10] } }
+                    fetch("http://127.0.0.1:5000/sendrequest", { method: "POST", mode: "cors", body: JSON.stringify(values) })
+                        .then(response => response.blob())
+                        .then(blobdata => {
+                            let blob= blobdata
+                            console.log(blob)
+                            let docx_filename = ""
+                            console.log(file_id)
+                            fetch("http://127.0.0.1:5000/sendrequest", { method: "POST", mode: "cors", body: JSON.stringify({ "mode": "getfilename", "id": file_id }) })
+                                .then(response => response.json())
+                                .then(jsondata=>{
+                                    let filename = jsondata["filename"]
+                                    console.log(filename)
+                                    let download_file = new File([blob], `${filename}.docx`, { type: blob.type })
+                                    docx_filename = filename
+                                    console.log("filename:", docx_filename)
+                                    let a = document.createElement('a')
+                                    let url = window.URL.createObjectURL(download_file)
+                                    console.log('filename:', docx_filename)
+                                    a.href = url
+                                    a.download = `${filename}.docx`
+                                    a.click()
+                                });
+
+                        })
+                })
+        }
+
+        function history_write(hikisu) {
+            history_dict = hikisu
+            console.log(history_dict)
+            document.getElementById('hider').style.display = "block"
+            document.getElementById('msgbox').style.display = "block"
+            let history_list = Object.keys(history_dict)
+            let history_str = ""
+            for (let i = 0; i <= history_list.length; i++) {
+                history_str += `<span onclick="history_detail(${i})">${String(history_list[i])}</span><br>`
+            }
+            document.getElementById('msg_content').innerHTML = history_str
+        }
+
+        function history_detail(num) {
+            console.log(num)
+            history_detail_num = num
+            let str = ""
+
+            for (let i = 0; i < Object.keys(history_dict[Object.keys(history_dict)[num]]).length; i++) {
+                str += `<span onclick="input_history(${i})">${history_dict[Object.keys(history_dict)[num]][String(i + 1)]["date"]}</span><br><br>`
+                console.log(history_dict[Object.keys(history_dict)[num][i]])
+                console.log(str)
+            }
+            document.getElementById('msg_content').innerHTML = str
+        }
+
+        function input_history(num) {
+            def_dict = history_dict[Object.keys(history_dict)[history_detail_num]][num + 1]["content"]
+            let dict_keys = ["hyoudai", "yoteibi", "jissibi", "kinyuusha", "sankasha", "mokuteki", "kigu", "yakuhin", "tejun", "kekka", "kousatu"]
+            for (let i = 0; i < dict_keys.length; i++) {
+                document.getElementsByTagName('input')[i].value = def_dict[dict_keys[i]]
+            }
+            delete_msgbox()
+        }
+
+        function get_history() {
+            document.getElementById('hider').style.display = "block"
+            document.getElementById('msgbox').style.display = "block"
+            document.getElementById('msg_content').innerHTML = "Loading..."
+            let request_data = { mode: "import" }
+            fetch('http://127.0.0.1:5000/sendrequest', { method: "POST", mode: "cors", body: JSON.stringify(request_data) })
+                .then(response => { return response.json() })
+                .then(data => { history_write(data) })
+        }
+
+        /*        const getId = async () => {
+                    let id_response = (await fetch("http://127.0.0.1:5000/getid", { method: "GET", mode: "cors" }))
+                    let id = 0
+                    let id_dict = {}
+                    if (id_response.ok) {
+                        id_dict = await id_response.json()
+                        console.log(id_dict)
+                        id = id_dict["id"]
+                        console.log(id)
+                    }
+                    return id
+                }
+                const getFileName = async () => {
+                    let filename_id = 0
+                    getId().then(
+                        id => {
+                            filename_id = id
+                            console.log(filename_id)
+                            let filename_response = (await fetch("http://127.0.0.1:5000/sendrequest", { method: "POST", mode: "cors", body: JSON.stringify({ "mode": "getfilename", "id": filename_id }) }))
+                            let filename_dict = {}
+                            if (filename_response.ok) {
+                                filename = filename_response.json()["filename"]
+                                console.log(filename)
+                                //console.log(filename_dict)
+                                //filename = filename_dict["filename"]
+                                console.log(filename)
+                                return filename
+                            } else { console.log("else") }
+                        })
+                }
+                */
+    </script>
+</body>
+
+</html>
